@@ -42,7 +42,7 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
     private var specifyMac = ""
     private var timeTag = 0L
     private var log = ""
-    private var savePerMinute = 1
+    private var savePerMinute = 60
     private val maxLog = 300
     private var timer: Timer = Timer()
     private var originSize = 0

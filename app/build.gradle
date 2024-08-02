@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.ys.bt"
-        minSdk 25
+        minSdk 23
         targetSdk 33
         versionCode 1
         versionName "v1.1.0"
