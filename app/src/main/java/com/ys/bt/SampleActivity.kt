@@ -165,7 +165,6 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
         val delay = 1000L
 
         var txCharacter: BluetoothGattCharacteristic? = null
-        var rxCharacter: BluetoothGattCharacteristic? = null
 
         btHelper.setIndicate(
             UUID.fromString("00000211-b2d1-43f0-9b88-960cebf8b91e"),
@@ -185,7 +184,6 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
 
         serviceList.find { it.uuid == UUID.fromString("00002902-0000-1000-8000-00805f9b34fb") }?.let {
             it.characteristics?.find { it.uuid == UUID.fromString("00000213-b2d1-43f0-9b88-960cebf8b91e") }?.let { x ->
-                rxCharacter = x
                 btHelper.descriptorChannelByCharacteristic(x)
             }
         }
