@@ -1,5 +1,6 @@
 package com.ys.bt
 
+import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
 import android.util.Log
@@ -133,6 +134,18 @@ class BTServiceControl(private val context: Context, private val btHelper: BTHel
         } catch (e: Exception) {
             Log.e("YsBT: $TAG", "DescriptorChannel error: $e")
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun setIndicate(serviceUUID: UUID, characteristicUUID: UUID) {
+        val characteristic = gatt?.getService(serviceUUID)?.getCharacteristic(characteristicUUID)
+
+        gatt?.setCharacteristicNotification(characteristic, true)
+
+        val descriptorUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+        val descriptor = characteristic?.getDescriptor(descriptorUUID)
+        descriptor?.value = BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+        gatt?.writeDescriptor(descriptor)
     }
 
     fun send(serviceUUID: UUID, characteristicUUID: UUID, msg: ByteArray) {

@@ -241,6 +241,10 @@ class BTHelper(private var context: Context, var nCallBack: BTCallBack) {
         } else true
     }
 
+    fun setIndicate(serviceUUID: UUID, characteristicUUID: UUID) {
+        service.setIndicate(serviceUUID, characteristicUUID)
+    }
+
     init {
         initialize()
         registerBTReceiver()

@@ -50,5 +50,6 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.android.support:multidex:2.0.1'
     implementation project(':bt')
+    implementation 'com.google.code.gson:gson:2.8.6'
     //implementation 'com.github.t109368015:YsBT:v1.1.0'
 }

@@ -8,11 +8,15 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import com.google.gson.Gson
 import com.ys.bt.databinding.ActivitySampleBinding
+import java.lang.Exception
+import java.util.UUID
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
@@ -38,16 +42,21 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
     }
 
     override fun rx(uuid: String, value: ByteArray?) {
-        //TODO("Not yet implemented")
+        Log.e("YsBT|.test", "RX: " + value.toHexString())
+        runOnUiThread { binding.edMsg.setText(binding.edMsg.text.toString() + "\nRX: " + value.toHexString()) }
     }
 
     override fun tx(uuid: String, value: ByteArray?) {
-        //TODO("Not yet implemented")
+        Log.e("YsBT|.test", "TX: " + value.toHexString())
+        runOnUiThread { binding.edMsg.setText(binding.edMsg.text.toString() + "\nTX: " + value.toHexString()) }
     }
 
     override fun onConnectionStateChange(isConnect: Boolean, serviceList: List<BluetoothGattService>?) {
         runOnUiThread {
-            if (isConnect && serviceList != null) detailFragment(serviceList) else Toast.makeText(this@SampleActivity, "Connect error", Toast.LENGTH_SHORT).show()
+            if (isConnect && serviceList != null) {
+//                 detailFragment(serviceList)
+                teslaTest(serviceList)
+            } else Toast.makeText(this@SampleActivity, "Connect error", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -93,7 +102,7 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
                         btHelper.stopScanDevice()
                         binding.pbBTScan.visibility = View.GONE
                         setDeviceListView()
-                    } }, 1000)
+                    } }, 2500)
             }
 
             tvEnable.setOnClickListener {
@@ -149,6 +158,107 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
             binding.listView.adapter = deviceListAdapter
         }
         deviceListAdapter.notifyDataSetChanged()
+    }
+
+    private fun teslaTest(serviceList: List<BluetoothGattService>) {
+        var th: Thread? = null
+        val delay = 1000L
+
+        var txCharacter: BluetoothGattCharacteristic? = null
+        var rxCharacter: BluetoothGattCharacteristic? = null
+
+        btHelper.setIndicate(
+            UUID.fromString("00000211-b2d1-43f0-9b88-960cebf8b91e"),
+            UUID.fromString("00000213-b2d1-43f0-9b88-960cebf8b91e")
+        )
+
+        serviceList.find { it.uuid == UUID.fromString("00000211-b2d1-43f0-9b88-960cebf8b91e") }?.let {
+//            it.characteristics?.find { it.uuid == UUID.fromString("00000213-b2d1-43f0-9b88-960cebf8b91e") }?.let { x ->
+//                rxCharacter = x
+//                btHelper.descriptorChannelByCharacteristic(x)
+//            }
+
+            it.characteristics?.find { it.uuid == UUID.fromString("00000212-b2d1-43f0-9b88-960cebf8b91e") }?.let { x ->
+                txCharacter = x
+            }
+        }
+
+        serviceList.find { it.uuid == UUID.fromString("00002902-0000-1000-8000-00805f9b34fb") }?.let {
+            it.characteristics?.find { it.uuid == UUID.fromString("00000213-b2d1-43f0-9b88-960cebf8b91e") }?.let { x ->
+                rxCharacter = x
+                btHelper.descriptorChannelByCharacteristic(x)
+            }
+        }
+
+        btHelper.setRx("00000213-b2d1-43f0-9b88-960cebf8b91e")
+        btHelper.setTx("00000212-b2d1-43f0-9b88-960cebf8b91e")
+
+        fun start() {
+            // TX: UUID: 00000211-b2d1-43f0-9b88-960cebf8b91e > uuid: 00000212-b2d1-43f0-9b88-960cebf8b91e > value: null
+            // RX: UUID: 00000211-b2d1-43f0-9b88-960cebf8b91e > uuid: 00000214-b2d1-43f0-9b88-960cebf8b91e > value: null
+            // INDICATE: UUID: 00000211-b2d1-43f0-9b88-960cebf8b91e > uuid: 00000213-b2d1-43f0-9b88-960cebf8b91e > value: null
+
+            val data = arrayListOf(
+                "00 07 F2 01 04 0A 02 08 01".replace(" ", ""),
+                "00 05 82 02 02 10 01".replace(" ", ""),
+                "00 03 F8 01 01".replace(" ", ""),
+                "00 03 98 02 0C".replace(" ", ""),
+                "00 03 98 02 01".replace(" ", ""),
+            )
+            // 1>2>3>4>5> LOOP ( 2 * 10 > 3 > 4 > 5)
+
+            fun send(tx: String) {
+                txCharacter?.let {
+                    btHelper.sendByCharacteristic(it, tx, BTHelper.DataType.Hex)
+                }
+            }
+
+            fun restart() {
+                th = Thread {
+                    for (i in 0 until 4) {
+                        send(data[i])
+                        Thread.sleep(delay)
+                    }
+
+                    var index = 0
+
+                    try {
+                        while (btHelper.isConnect()) {
+                            when (index % 13) {
+                                in 0 .. 9 -> send(data[1])
+                                10 -> send(data[2])
+                                11 -> send(data[3])
+                                12 -> {
+                                    send(data[4])
+                                    index = 0
+                                }
+                            }
+
+                            index++
+                            Thread.sleep(delay)
+                        }
+                    } catch (e: Exception) {}
+                }.also { it.start() }
+            }
+
+            restart()
+        }
+
+        binding.run {
+            clTesla.visibility = View.VISIBLE
+
+            start()
+
+            btnBack2.setOnClickListener {
+                btHelper.disConnect()
+                clTesla.visibility = View.GONE
+                th?.interrupt()
+            }
+
+            btnRestart2.setOnClickListener { start() }
+
+            btnSave.setOnClickListener {  }
+        }
     }
 
     private fun detailFragment(serviceList: List<BluetoothGattService>) {
@@ -229,4 +339,6 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
             false
         } else true
     }
+
+    fun ByteArray?.toHexString(): String { return this?.joinToString(separator = "") { byte -> "%02x".format(byte) } ?: "" }
 }

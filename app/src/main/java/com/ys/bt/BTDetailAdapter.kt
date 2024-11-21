@@ -4,12 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.content.Context
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.gson.Gson
 import com.ys.bt.databinding.ItemDetailInnerBinding
 import com.ys.bt.databinding.ItemServiceDetailBinding
 
@@ -52,6 +54,8 @@ class BTDetailAdapter(private var context: Context, private var list: List<Bluet
         holder.tvAddress.text = "${item.uuid}"
         holder.tvService.text = if (item.type == 0) "SERVICE_TYPE_PRIMARY" else "SERVICE_TYPE_SECONDARY"
         holder.tvStatus.text = "${item.instanceId}"
+
+        Log.d(".ble", "item.uuid: ${item.uuid}")
 
         holder.llTest.removeAllViews()
         for (i in item.characteristics) {
