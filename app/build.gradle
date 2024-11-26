@@ -51,5 +51,6 @@ dependencies {
     implementation 'com.android.support:multidex:2.0.1'
     implementation project(':bt')
     implementation 'com.google.code.gson:gson:2.8.6'
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
     //implementation 'com.github.t109368015:YsBT:v1.1.0'
 }
