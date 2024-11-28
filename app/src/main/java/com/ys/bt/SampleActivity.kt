@@ -47,6 +47,14 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
         "00 03 98 02 01".replace(" ", ""),
     )
     private val logData = ArrayList<ApiUtil.TeslaUpload>()
+    var txCharacter: BluetoothGattCharacteristic? = null
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            btHelper.disConnect()
+        } catch (e: Exception) {}
+    }
 
     override fun onRequestPermission(list: ArrayList<String>) { checkAndRequestPermission(list[0], 0) }
 
@@ -105,10 +113,18 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
         setListener()
     }
     private fun init() {
-        if (checkAndRequestPermission(Manifest.permission.BLUETOOTH_CONNECT, 1) &&
-            checkAndRequestPermission(Manifest.permission.BLUETOOTH_SCAN, 2) && checkAndRequestPermission(Manifest.permission.BLUETOOTH_SCAN, 3)) {
-            initBTHelper()
+        Log.d(".ble", "Build.VERSION.SDK_INT: ${Build.VERSION.SDK_INT}")
+        Log.d(".ble", "Build.VERSION_CODES.M: ${Build.VERSION_CODES.P}")
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            Log.d(".ble", "permission BLUETOOTH_CONNECT: ${checkAndRequestPermission(Manifest.permission.BLUETOOTH_CONNECT, 1)}")
+            Log.d(".ble", "permission BLUETOOTH_SCAN: ${checkAndRequestPermission(Manifest.permission.BLUETOOTH_SCAN, 2)}")
         }
+
+        Log.d(".ble", "permission ACCESS_COARSE_LOCATION: ${checkAndRequestPermission(Manifest.permission.ACCESS_COARSE_LOCATION, 0)}")
+
+        Log.d(".ble", "checkPermission: ${checkPermission()}")
+
+        initBTHelper()
     }
 
     private fun initBTHelper() {
@@ -178,8 +194,14 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
             deviceListAdapter = BTListAdapter(this, selectedDevices)
             deviceListAdapter.setListener(object: BTListAdapter.BTListClickListener {
                 override fun onClick(device: BluetoothDevice) {
-                    Toast.makeText(this@SampleActivity, "Connecting..", Toast.LENGTH_SHORT).show()
-                    btHelper.connect(device.address)
+                    if (btHelper.isConnect()) {
+                        txCharacter?.let {
+                            btHelper.sendByCharacteristic(it, "0ACC", BTHelper.DataType.Hex)
+                        }
+                    } else {
+                        Toast.makeText(this@SampleActivity, "Connecting..", Toast.LENGTH_SHORT).show()
+                        btHelper.connect(device.address)
+                    }
                 }
             })
             binding.listView.adapter = deviceListAdapter
@@ -190,8 +212,6 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
     private fun teslaTest(serviceList: List<BluetoothGattService>) {
         var th: Thread? = null
         val delay = 4000L
-
-        var txCharacter: BluetoothGattCharacteristic? = null
 
         btHelper.setIndicate(
             UUID.fromString("00000211-b2d1-43f0-9b88-960cebf8b91e"),
@@ -216,6 +236,12 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
 
         btHelper.setRx("00000213-b2d1-43f0-9b88-960cebf8b91e")
         btHelper.setTx("00000212-b2d1-43f0-9b88-960cebf8b91e")
+
+        txCharacter?.let {
+            btHelper.sendByCharacteristic(it, "0ACC", BTHelper.DataType.Hex)
+        }
+
+        return
 
         fun start() {
             // TX: UUID: 00000211-b2d1-43f0-9b88-960cebf8b91e > uuid: 00000212-b2d1-43f0-9b88-960cebf8b91e > value: null
@@ -244,7 +270,7 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
                     try {
                         while (btHelper.isConnect()) {
                             if (clock.runTimeS() >= 60) {
-                                runOnUiThread { binding.edMsg.text =ㄈㄨㄡ "" }
+                                runOnUiThread { binding.edMsg.text = "" }
                                 save()
                                 clock.reset()
                             }
@@ -356,9 +382,13 @@ class SampleActivity : AppCompatActivity(), BTCallBack {
     }
 
     fun checkPermission(): Boolean {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            if (!checkAndRequestPermission(Manifest.permission.BLUETOOTH_CONNECT, 1)) return false
+            if (!checkAndRequestPermission(Manifest.permission.BLUETOOTH_SCAN, 2)) return false
+        }
+
         if (!checkAndRequestPermission(Manifest.permission.ACCESS_COARSE_LOCATION, 0)) return false
-        if (!checkAndRequestPermission(Manifest.permission.BLUETOOTH_CONNECT, 1)) return false
-        if (!checkAndRequestPermission(Manifest.permission.BLUETOOTH_SCAN, 2)) return false
+
         return true
     }
 
